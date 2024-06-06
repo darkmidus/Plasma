@@ -8,9 +8,12 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/energye/systray"
 )
 
 func main() {
+	systray.Run(onReady, onExit)
 	for {
 		running, err := checkProcessExistence("Code.exe")
 
@@ -107,4 +110,29 @@ func documentUsage(title string, results string) {
 			fmt.Println(err.Error())
 		}
 	}
+}
+
+func onReady() {
+	iconBytes, err := os.ReadFile("icon.ico")
+	if err != nil {
+		fmt.Println("Error reading icon file:", err)
+		return
+	}
+
+	systray.SetIcon(iconBytes)
+	systray.SetTitle("Plasma")
+	systray.SetTooltip("Your personal code tracker")
+	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
+	mQuit.Enable()
+	mQuit.Click(func() {
+		fmt.Println("Requesting quit")
+		systray.Quit()
+		fmt.Println("Finished quitting")
+		os.Exit(0)
+	})
+
+}
+
+func onExit() {
+	// clean up here
 }
