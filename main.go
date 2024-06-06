@@ -57,9 +57,13 @@ func doesFileExist(filename string) bool {
 }
 
 func documentUsage(date string, results string) {
-	const logDir = "log"
-	const totalTimeFile = logDir + "/total.txt"
-	dailyTimeFile := logDir + "/" + date + ".txt"
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		println(err)
+	}
+	logDir := dirname + "/AppData/Roaming/plasma/log/"
+	totalTimeFile := logDir + "total.txt"
+	dailyTimeFile := logDir + date + ".txt"
 
 	// Ensure the log directory exists
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
