@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/ChromeTemp/Popup"
@@ -15,20 +16,30 @@ import (
 
 func main() {
 	isPlasmaRunning()
-	go systray.Run(onReady, onExit)
-	monitorProcess("Code.exe")
+	systray.Run(onReady, onExit)
 }
 
 func checkProcessExistence(name string) (bool, int, error) {
+	var processAmount int
 	cmd := exec.Command("tasklist")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
+	err := cmd.Run()
+	if err != nil {
 		return false, 0, err
 	}
-
-	processAmount := strings.Count(out.String(), name)
-	return processAmount > 0, processAmount, nil
+	output := out.String()
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, name) {
+			processAmount++
+		}
+	}
+	if processAmount > 0 {
+		return true, processAmount, nil
+	}
+	return false, 0, nil
 }
 
 func doesFileExist(filename string) bool {
@@ -78,6 +89,7 @@ func documentUsage(date string, results string) {
 			return
 		}
 
+		// Add the new time spent to the total duration
 		newTotalDuration := totalDuration.Add(timeSpent.Sub(time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)))
 		if err := os.WriteFile(totalTimeFile, []byte(newTotalDuration.Format("15:04:05")), 0644); err != nil {
 			fmt.Println("Error writing to total time file:", err)
@@ -121,6 +133,7 @@ func onReady() {
 		os.Exit(0)
 	})
 
+	go monitorProcess("Code.exe")
 }
 
 func monitorProcess(processName string) {
