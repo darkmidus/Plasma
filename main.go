@@ -153,6 +153,12 @@ func onReady() {
 	}
 	systray.SetTitle("Plasma")
 	systray.SetTooltip("Your personal code tracker")
+	mStats := systray.AddMenuItem("Stats", "Stats for you coding.")
+	mStats.Click(func() {
+		totalTime := statsChecker()
+		Popup.Alert("Plasma Stats", totalTime)
+		fmt.Println(totalTime)
+	})
 	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
 	mQuit.Enable()
 	mQuit.Click(func() {
@@ -161,7 +167,6 @@ func onReady() {
 		fmt.Println("Finished quitting")
 		os.Exit(0)
 	})
-
 	go monitorProcess("Code.exe")
 }
 
@@ -235,4 +240,23 @@ func DownloadFile(filepath string, url string) error {
 	// Write the body to file
 	_, err = io.Copy(out, resp.Body)
 	return err
+}
+
+func statsChecker() string {
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		println(err)
+	}
+	totalTimeFile := dirname + "/AppData/Roaming/plasma/log/total.txt"
+	if doesFileExist(totalTimeFile) {
+		totalTimeContent, err := os.ReadFile(totalTimeFile)
+		if err != nil {
+			fmt.Println("Error reading total time file:", err)
+			return "Error reading total time file"
+		}
+		return "Total time spent coding: " + string(totalTimeContent)
+	} else if !doesFileExist(totalTimeFile) {
+		return "No Stats Found."
+	}
+	return ""
 }
