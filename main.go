@@ -9,13 +9,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ChromeTemp/Popup"
 	"github.com/energye/systray"
 )
 
 func main() {
+	isPlasmaRunning()
 	systray.Run(onReady, onExit)
 	for {
-		running, err := checkProcessExistence("Code.exe")
+		running, _, err := checkProcessExistence("Code.exe")
 
 		if err != nil {
 			fmt.Println("Error while checking process: ", err)
@@ -25,7 +27,7 @@ func main() {
 		if running {
 			start := time.Now()
 			for {
-				running, err := checkProcessExistence("Code.exe")
+				running, _, err := checkProcessExistence("Code.exe")
 
 				if err != nil {
 					fmt.Println("Error while checking process: ", err)
@@ -52,22 +54,26 @@ func main() {
 
 }
 
-func checkProcessExistence(name string) (bool, error) {
+func checkProcessExistence(name string) (bool, int, error) {
+	var processAmount int
 	cmd := exec.Command("tasklist")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 	output := out.String()
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		if strings.Contains(line, name) {
-			return true, nil
+			processAmount++
 		}
 	}
-	return false, nil
+	if processAmount > 0 {
+		return true, processAmount, nil
+	}
+	return false, 0, nil
 }
 
 func doesFileExist(filename string) bool {
@@ -131,6 +137,18 @@ func onReady() {
 		os.Exit(0)
 	})
 
+}
+
+func isPlasmaRunning() {
+	running, processAmount, err := checkProcessExistence("Plasma.exe")
+	if err != nil {
+		fmt.Println("Error while checking process: ", err)
+		return
+	}
+	if running && processAmount > 1 {
+		Popup.Alert("Plasma Error", "Plasma is already running.")
+		os.Exit(0)
+	}
 }
 
 func onExit() {
