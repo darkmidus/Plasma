@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -115,13 +117,36 @@ func appendToFile(filename, data string) {
 }
 
 func onReady() {
-	iconBytes, err := os.ReadFile("icon.ico")
+	dirname, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Println("Error reading icon file:", err)
-		return
+		println(err)
 	}
-
-	systray.SetIcon(iconBytes)
+	plasmaData := dirname + "/AppData/Roaming/plasma/"
+	if _, err := os.Stat(plasmaData); os.IsNotExist(err) {
+		if err := os.Mkdir(plasmaData, 0755); err != nil {
+			fmt.Println("Error creating log directory:", err)
+			return
+		}
+	}
+	if doesFileExist(plasmaData + "icon.ico") {
+		iconBytes, err := os.ReadFile(plasmaData + "icon.ico")
+		if err != nil {
+			fmt.Println("Error reading icon file:", err)
+			return
+		} else {
+			systray.SetIcon(iconBytes)
+		}
+	} else if !doesFileExist(plasmaData + "icon.ico") {
+		DownloadFile(plasmaData+"icon.ico", "https://raw.githubusercontent.com/darkmidus/Plasma/main/icon.ico")
+		iconBytes, err := os.ReadFile("icon.ico")
+		if err != nil {
+			fmt.Println("Error reading icon file:", err)
+			return
+		} else {
+			time.Sleep(1 * time.Second)
+			systray.SetIcon(iconBytes)
+		}
+	}
 	systray.SetTitle("Plasma")
 	systray.SetTooltip("Your personal code tracker")
 	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
@@ -185,4 +210,25 @@ func isPlasmaRunning() {
 
 func onExit() {
 	// clean up here
+}
+
+func DownloadFile(filepath string, url string) error {
+
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Create the file
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
