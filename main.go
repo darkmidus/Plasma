@@ -115,7 +115,7 @@ func documentUsage(date string, results string) {
 	days := hours / 24
 	hours = hours % 24
 
-	newTotalDuration := fmt.Sprintf("%03d:%02d:%02d.%02d", days, hours, minutes, seconds)
+	newTotalDuration := fmt.Sprintf("%03d:%02d:%02d:%02d", days, hours, minutes, seconds)
 	if err := os.WriteFile(totalTimeFile, []byte(newTotalDuration), 0644); err != nil {
 		fmt.Println("Error writing to total time file:", err)
 	}
@@ -172,6 +172,10 @@ func onReady() {
 		totalTime := statsChecker()
 		Popup.Alert("Plasma Stats", totalTime)
 		fmt.Println(totalTime)
+	})
+	mAbout := systray.AddMenuItem("About", "About Plasma")
+	mAbout.Click(func() {
+		Popup.Alert("About Plasma v0.06", "A litte FOSS stats tracker <3 -DarkMidus")
 	})
 	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
 	mQuit.Enable()
@@ -268,7 +272,20 @@ func statsChecker() string {
 			fmt.Println("Error reading total time file:", err)
 			return "Error reading total time file"
 		}
-		return "Total time spent coding: " + string(totalTimeContent)
+
+		totalTimeParts := strings.Split(strings.TrimSpace(string(totalTimeContent)), ":")
+		if len(totalTimeParts) != 4 {
+			fmt.Println("Error parsing total time file format")
+			return "Error parsing total time file format"
+		}
+
+		days, _ := strconv.Atoi(totalTimeParts[0])
+		hours, _ := strconv.Atoi(totalTimeParts[1])
+		minutes, _ := strconv.Atoi(totalTimeParts[2])
+		seconds, _ := strconv.Atoi(totalTimeParts[3])
+
+		formattedTime := fmt.Sprintf("%03d:%02d:%02d.%02d", days, hours, minutes, seconds)
+		return "Total time spent coding: " + formattedTime
 	} else if !doesFileExist(totalTimeFile) {
 		return "No Stats Found."
 	}
