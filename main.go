@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -82,6 +83,8 @@ func documentUsage(date string, results string) {
 		return
 	}
 
+	var totalDuration time.Duration
+
 	if doesFileExist(totalTimeFile) {
 		totalTimeContent, err := os.ReadFile(totalTimeFile)
 		if err != nil {
@@ -89,21 +92,32 @@ func documentUsage(date string, results string) {
 			return
 		}
 
-		totalDuration, err := time.Parse("15:04:05", strings.TrimSpace(string(totalTimeContent)))
-		if err != nil {
-			fmt.Println("Error parsing total time:", err)
+		totalTimeParts := strings.Split(strings.TrimSpace(string(totalTimeContent)), ":")
+		if len(totalTimeParts) == 4 {
+			days, _ := strconv.Atoi(totalTimeParts[0])
+			hours, _ := strconv.Atoi(totalTimeParts[1])
+			minutes, _ := strconv.Atoi(totalTimeParts[2])
+			seconds, _ := strconv.Atoi(totalTimeParts[3])
+			totalDuration = time.Duration(days*24)*time.Hour + time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
+		} else {
+			fmt.Println("Error parsing total time file format")
 			return
 		}
 
-		// Add the new time spent to the total duration
-		newTotalDuration := totalDuration.Add(timeSpent.Sub(time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)))
-		if err := os.WriteFile(totalTimeFile, []byte(newTotalDuration.Format("15:04:05")), 0644); err != nil {
-			fmt.Println("Error writing to total time file:", err)
-		}
+		totalDuration += timeSpent.Sub(time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC))
 	} else {
-		if err := os.WriteFile(totalTimeFile, []byte(timeSpentStr), 0644); err != nil {
-			fmt.Println("Error writing to total time file:", err)
-		}
+		totalDuration = timeSpent.Sub(time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC))
+	}
+
+	hours := int(totalDuration.Hours())
+	minutes := int(totalDuration.Minutes()) % 60
+	seconds := int(totalDuration.Seconds()) % 60
+	days := hours / 24
+	hours = hours % 24
+
+	newTotalDuration := fmt.Sprintf("%03d:%02d:%02d.%02d", days, hours, minutes, seconds)
+	if err := os.WriteFile(totalTimeFile, []byte(newTotalDuration), 0644); err != nil {
+		fmt.Println("Error writing to total time file:", err)
 	}
 }
 
